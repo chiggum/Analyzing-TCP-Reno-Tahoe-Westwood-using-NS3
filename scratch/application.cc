@@ -1,10 +1,44 @@
 /*
-GPL License
-----------------
+ * Copyright (C) 2013 - Dhruv Kohli <codechiggum at gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * 
+ * This code heavily borrows from ns3 itself which are copyright of their
+ * respective authors and redistributable under the same conditions.
+ *
+ */
 
-Application 6:
-Detail...
 
+/*
+Application Detail:
+
+Analyse and compare TCP Reno, TCP Vegas, and TCP Fack (i.e. Reno TCP with "forward
+acknowledgment") performance. Select a Dumbbell topology with two routers R1 and R2 connected by a
+(10 Mbps, 50 ms) wired link. Each of the routers is connected to 3 hosts i.e., H1 to H3 (i.e. senders) are
+connected to R1 and H4 to H6 (i.e. receivers) are connected to R2. The hosts are attached with (100 Mbps,
+20ms) links. Both the routers use drop-tail queues with queue size set according to bandwidth-delay product.
+Senders (i.e. H1, H2 and H3) are attached with TCP Reno, TCP Vegas, and TCP Fack agents respectively.
+Choose a packet size of 1.2KB and perform the following task. Make appropriate assumptions wherever
+necessary.
+a. Start only one flow and analyse the throughput over sufficiently long duration. Mention how do you
+select the duration. Plot of evolution of congestion window over time. Perform this experiment
+with flows attached to all the three sending agents.
+b. Next, start 2 other flows sharing the bottleneck while the first one is in progress and measure the
+throughput (in Kbps) of each flow. Plot the throughput and congestion window of each flow at
+steady-state. What is the maximum throughput of each flow? 
+c. Measure the congestion loss and goodput over the duration of the experiment for each flow. 
 
 
 Implementation detail:
@@ -38,6 +72,8 @@ Senders	|	H2------R1------R2-----H5	 |	Receivers
 	and max #packets (R1R2) = 10Mbps*50ms = 500000
 
 */
+
+
 #include <string>
 #include <fstream>
 #include <cstdlib>
