@@ -23,7 +23,6 @@
 
 /*
 Application Detail:
-
 Analyse and compare TCP Reno, TCP Vegas, and TCP Fack (i.e. Reno TCP with "forward
 acknowledgment") performance. Select a Dumbbell topology with two routers R1 and R2 connected by a
 (10 Mbps, 50 ms) wired link. Each of the routers is connected to 3 hosts i.e., H1 to H3 (i.e. senders) are
@@ -39,8 +38,6 @@ b. Next, start 2 other flows sharing the bottleneck while the first one is in pr
 throughput (in Kbps) of each flow. Plot the throughput and congestion window of each flow at
 steady-state. What is the maximum throughput of each flow? 
 c. Measure the congestion loss and goodput over the duration of the experiment for each flow. 
-
-
 Implementation detail:
 		 _								_
 		|	H1------+		+------H4	 |
@@ -48,32 +45,24 @@ Implementation detail:
 Senders	|	H2------R1------R2-----H5	 |	Receivers
 		|			|		|			 |
 		|_	H3------+		+------H6	_|
-
 	Representation in code:
 	H1(n0), H2(n1), H3(n2), H4(n3), H5(n4), H6(n5), R1(n6), R2(n7) :: n stands for node
-
 	Dumbbell topology is used with 
 	H1, H2, H3 on left side of dumbbell,
 	H4, H5, H6 on right side of dumbbell,
 	and routers R1 and R2 form the bridge of dumbbell.
-
 	H1 is attached with TCP Reno agent.
 	H2 is attached with TCP Vegas agent.
 	H3 is attached with TCP Fack agent.
-
 	Links:
 	H1R1/H2R1/H3R1/H4R2/H5R2/H6R2: P2P with 100Mbps and 20ms.
 	R1R2: (dumbbell bridge) P2P with 10Mbps and 50ms.
-
 	packet size: 1.2KB.
 	Number of packets decided by Bandwidth delay product:
 	i.e. #packets = Bandwidth*Delay(in bits)
 	Therefore, max #packets (HiRj) = 100Mbps*20ms = 2000000
 	and max #packets (R1R2) = 10Mbps*50ms = 500000
-
 */
-
-
 #include <string>
 #include <fstream>
 #include <cstdlib>
@@ -294,7 +283,7 @@ void partAC() {
 
 	double errorP = ERROR;
 
-
+	//set droptail queue mode as packets i.e. to use maxpackets as queuesize metric not bytes
 	Config::SetDefault("ns3::DropTailQueue::Mode", StringValue("QUEUE_MODE_PACKETS"));
     /*
     Config::SetDefault("ns3::DropTailQueue::MaxPackets", UintegerValue(queuesize));
@@ -302,6 +291,22 @@ void partAC() {
 
 	//Creating channel without IP address
 	PointToPointHelper p2pHR, p2pRR;
+	/*
+		SetDeviceAttribute: sets attributes of pointToPointNetDevice
+		DataRate
+		Address: MACAddress
+		ReceiveErrorModel
+		InterframeGap: The time to wait between packet (frame) transmissions
+		TxQueue: A queue to use as the transmit queue in the device.
+
+		SetChannelAttribute: sets attributes of pointToPointChannel
+		Delay: Transmission delay through the channel
+
+		SetQueue: sets attribute of a queue say droptailqueue
+		Mode: Whether to use Bytes (see MaxBytes) or Packets (see MaxPackets) as the maximum queue size metric.
+		MaxPackets: The maximum number of packets accepted by this DropTailQueue.
+		MaxBytes: The maximum number of bytes accepted by this DropTailQueue.
+	*/
 	p2pHR.SetDeviceAttribute("DataRate", StringValue(rateHR));
 	p2pHR.SetChannelAttribute("Delay", StringValue(latencyHR));
 	p2pHR.SetQueue("ns3::DropTailQueue", "MaxPackets", UintegerValue(queueSizeHR));
@@ -310,14 +315,31 @@ void partAC() {
 	p2pRR.SetQueue("ns3::DropTailQueue", "MaxPackets", UintegerValue(queueSizeRR));
 
 	//Adding some errorrate
+	/*
+		Error rate model attributes
+		ErrorUnit: The error unit
+		ErrorRate: The error rate.
+		RanVar: The decision variable attached to this error model.
+	*/
 	Ptr<RateErrorModel> em = CreateObjectWithAttributes<RateErrorModel> ("ErrorRate", DoubleValue (errorP));
 
+	//Empty node containers
 	NodeContainer routers, senders, receivers;
+	//Create n nodes and append pointers to them to the end of this NodeContainer. 
 	routers.Create(2);
 	senders.Create(numSender);
 	receivers.Create(numSender);
 
+	/*
+		p2pHelper.Install:
+		This method creates a ns3::PointToPointChannel with the attributes configured 
+		by PointToPointHelper::SetChannelAttribute, then, for each node in the input container,
+		we create a ns3::PointToPointNetDevice with the requested attributes, 
+		a queue for this ns3::NetDevice, and associate the resulting ns3::NetDevice 
+		with the ns3::Node and ns3::PointToPointChannel.
+	*/
 	NetDeviceContainer routerDevices = p2pRR.Install(routers);
+	//Empty netdevicecontatiners
 	NetDeviceContainer leftRouterDevices, rightRouterDevices, senderDevices, receiverDevices;
 
 	//Adding links
@@ -334,6 +356,10 @@ void partAC() {
 	}
 
 	//Install Internet Stack
+	/*
+		For each node in the input container, aggregate implementations of 
+		the ns3::Ipv4, ns3::Ipv6, ns3::Udp, and, ns3::Tcp classes. 
+	*/
 	InternetStackHelper stack;
 	stack.Install(routers);
 	stack.Install(senders);
@@ -341,13 +367,15 @@ void partAC() {
 
 
 	//Adding IP addresses
-	Ipv4AddressHelper routerIP = Ipv4AddressHelper("10.3.0.0", "255.255.255.0");
+	Ipv4AddressHelper routerIP = Ipv4AddressHelper("10.3.0.0", "255.255.255.0");	//(network, mask)
 	Ipv4AddressHelper senderIP = Ipv4AddressHelper("10.1.0.0", "255.255.255.0");
 	Ipv4AddressHelper receiverIP = Ipv4AddressHelper("10.2.0.0", "255.255.255.0");
 	
 
 	Ipv4InterfaceContainer routerIFC, senderIFCs, receiverIFCs, leftRouterIFCs, rightRouterIFCs;
 
+	//Assign IP addresses to the net devices specified in the container 
+	//based on the current network prefix and address base
 	routerIFC = routerIP.Assign(routerDevices);
 
 	for(uint i = 0; i < numSender; ++i) {
@@ -357,6 +385,8 @@ void partAC() {
 		Ipv4InterfaceContainer senderIFC = senderIP.Assign(senderDevice);
 		senderIFCs.Add(senderIFC.Get(0));
 		leftRouterIFCs.Add(senderIFC.Get(1));
+		//Increment the network number and reset the IP address counter 
+		//to the base value provided in the SetBase method.
 		senderIP.NewNetwork();
 
 		NetDeviceContainer receiverDevice;
@@ -371,9 +401,6 @@ void partAC() {
 	/*
 		Measuring Performance of each TCP variant
 	*/
-	//To be written
-	
-
 
 	
 	/********************************************************************
